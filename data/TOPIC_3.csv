@@ -1,2 +1,3 @@
 ﻿name,io_address,address_type,point_type,rw,desc
 6666,666,constant,float,rw,
+77777,555,memory,float,rw,

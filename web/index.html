@@ -44,13 +44,36 @@
   aside {
     width: 240px; flex: none; background: var(--bg-panel);
     border-right: 1px solid var(--line); padding: 14px;
-    display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px; overflow: hidden;
   }
+  /* 上段：文件树区（占满剩余高度，内部独立滚动）；下段：新建文件表单固定可见 */
+  .file-pane { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
   .panel-title {
     font-size: 12px; color: var(--fg-dim); letter-spacing: 2px;
     text-transform: uppercase; border-bottom: 1px solid var(--line); padding-bottom: 6px;
   }
-  #fileList { display: flex; flex-direction: column; gap: 4px; }
+  #fileList { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+  /* 树形展示：data_dir 根节点（可折叠）→ CSV 文件子节点；根节点 sticky 不随内容滚走 */
+  .tree-root {
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    background: var(--bg-panel); font-weight: 600;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .tree-root:hover { border-color: var(--accent); }
+  .tree-root .caret {
+    flex: none; width: 16px; text-align: center; font-family: var(--mono);
+    color: var(--fg-dim);
+  }
+  .tree-root .dir {
+    font-family: var(--mono); font-size: 12px; font-weight: normal;
+    color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tree-children {
+    display: flex; flex-direction: column; gap: 4px;
+    padding-left: 14px; margin-top: 2px;
+  }
+  .tree-children.collapsed { display: none; }
   .file-item {
     padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
     cursor: pointer; display: flex; justify-content: space-between; min-height: 36px;
@@ -129,7 +152,7 @@
 
 <main>
   <aside>
-    <div>
+    <div class="file-pane">
       <div class="panel-title">CSV 文件</div>
       <div style="height:8px"></div>
       <button onclick="refreshFiles()">刷新列表</button>
@@ -271,17 +294,39 @@ function pollHealth() {
 setInterval(pollHealth, 5000);
 
 /* ---------- 文件管理 ---------- */
+var treeCollapsed = false; /* 树形根节点折叠状态（刷新列表时保持） */
+
 function refreshFiles() {
   api("/api/v1/files").then(function (b) {
     var list = $("fileList");
     list.textContent = "";
-    if (!b.data.files.length) {
+    var files = b.data.files || [];
+    if (!files.length) {
       var tip = document.createElement("div");
       tip.className = "empty"; tip.textContent = "暂无 CSV 文件，请先新建";
       list.appendChild(tip);
       return;
     }
-    b.data.files.forEach(function (f) {
+    /* 树形展示：根节点 = 数据目录（可折叠），子节点 = CSV 文件 */
+    var dataDir = b.data.data_dir || "data";
+    var root = document.createElement("div");
+    root.className = "tree-root";
+    var caret = document.createElement("span");
+    caret.className = "caret"; caret.textContent = treeCollapsed ? "▸" : "▾";
+    var dir = document.createElement("span");
+    dir.className = "dir"; dir.textContent = dataDir;
+    dir.title = dataDir; /* 完整路径悬停可见 */
+    root.appendChild(caret); root.appendChild(dir);
+    var children = document.createElement("div");
+    children.className = "tree-children" + (treeCollapsed ? " collapsed" : "");
+    root.onclick = function () {
+      treeCollapsed = !treeCollapsed;
+      children.className = "tree-children" + (treeCollapsed ? " collapsed" : "");
+      caret.textContent = treeCollapsed ? "▸" : "▾";
+    };
+    list.appendChild(root);
+
+    files.forEach(function (f) {
       var item = document.createElement("div");
       item.className = "file-item" + (currentFile === f.name.replace(/\.csv$/, "") ? " active" : "");
       var name = document.createElement("span");
@@ -290,8 +335,9 @@ function refreshFiles() {
       rows.className = "rows"; rows.textContent = f.rows + " 行";
       item.appendChild(name); item.appendChild(rows);
       item.onclick = function () { selectFile(f.name.replace(/\.csv$/, "")); };
-      list.appendChild(item);
+      children.appendChild(item);
     });
+    list.appendChild(children);
   }).catch(function (e) { setStatus("加载文件列表失败：" + errText(e), "err"); });
 }
 
