@@ -58,10 +58,13 @@ target_compile_options(spdlog_lib PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/utf-8>
 )
 
-# 多配置生成器（Visual Studio）：统一 exe 输出到 build-vs/<Config>/，
-# 与顶层测试目标一致；单配置生成器（MinGW）不受影响（run_tests.py 依赖 build/ 根路径）。
+# 统一 exe 输出：多配置生成器（Visual Studio）输出到 build-vs/<Config>/；
+# 单配置生成器（MinGW）统一输出到 build/ 根（含子目录 target tagledger），
+# 与 run_tests.py 检索路径及用户直接运行习惯一致（2026-11-15 方案 B）。
 if(CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>")
+else()
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif()
 
 # ---------- 分层结构（S 系列）：apps → services → common → third_party（F4 单向） ----------

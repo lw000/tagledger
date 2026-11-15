@@ -9,7 +9,7 @@
   4. POSIX 下另验证真实信号路径（SIGTERM）；Windows 控制台信号无法由外部可靠发送，
      以管理端点路径覆盖（signal_entry 逻辑在单元测试 [unit][shutdown] 中覆盖）。
 
-用法：python tests/scripts/graceful_shutdown_test.py [--exe build/apps/tagledger/tagledger.exe]
+用法：python tests/scripts/graceful_shutdown_test.py [--exe build/tagledger.exe]
 """
 import argparse
 import json
@@ -148,8 +148,7 @@ def scenario(exe, port, use_signal):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--exe",
-                    default=os.path.join(ROOT, "build", "apps", "tagledger",
-                                         "tagledger.exe"))
+                    default=os.path.join(ROOT, "build", "tagledger.exe"))
     ap.add_argument("--port", type=int, default=18099)
     args = ap.parse_args()
 

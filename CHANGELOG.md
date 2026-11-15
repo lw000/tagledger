@@ -7,10 +7,11 @@
 
 ---
 
-## 2026-11-15（19 条）→ [changelog/2026-11-15.md](changelog/2026-11-15.md)
+## 2026-11-15（20 条）→ [changelog/2026-11-15.md](changelog/2026-11-15.md)
 
 | 时间 | 主题 |
 | --- | --- |
+| 19:05 | 构建产物统一输出到 build 根：tagledger.exe 不再散落于子目录（人工确认的方案 B） |
 | 18:32 | AI 编码规范新增规则：变更记录结构重组为"根 CHANGELOG.md 索引 + changelog/ 按日归档"（纯文档） |
 | 18:26 | .gitignore 补充运行期日志目录 logs/（纯配置） |
 | 18:23 | AI 编码规范新增规则：third_party 目录所有文件严禁修改（README.md 除外）（纯文档） |

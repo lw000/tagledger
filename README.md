@@ -40,7 +40,7 @@ tagledger/
 ## 运行
 
 ```powershell
-.\build\apps\tagledger\tagledger.exe --port=8080 --data-dir=data --web-dir=web --config-dir=config
+.\build\tagledger.exe --port=8080 --data-dir=data --web-dir=web --config-dir=config
 # 浏览器打开 http://localhost:8080/
 ```
 

@@ -5,7 +5,7 @@
             "name": "调试 tagledger 主程序 (MinGW gdb)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/apps/tagledger/tagledger.exe",
+            "program": "${workspaceFolder}/build/tagledger.exe",
             "args": [
                 "--port=8080",
                 "--data-dir=data",

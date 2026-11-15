@@ -25,10 +25,9 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 
 
 def find_exe(name):
-    # 2026-11-15 更名 TagLedger：子目录目标（tagledger，定义于 apps/tagledger/）
-    # 输出到 target 所在目录 build/apps/tagledger/；顶层目标（tagledger_tests）
-    # 输出到 build/ 根。按新布局优先检索，build/ 根仅作兼容回退。
-    rel_dirs = [os.path.join("build", "apps", "tagledger"), "build"]
+    # 2026-11-15 方案 B：单配置生成器统一 RUNTIME_OUTPUT_DIRECTORY=build 根，
+    # 所有 exe（含子目录 target tagledger）输出到 build/。子目录路径仅作旧布局兼容回退。
+    rel_dirs = ["build", os.path.join("build", "apps", "tagledger")]
     for rel in rel_dirs:
         cand = os.path.join(ROOT, rel, name)
         if os.name == "nt":
