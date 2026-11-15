@@ -1,0 +1,48 @@
+# ===== 构建输出目录 =====
+# MinGW 构建（cmake-debug.bat / cmake-release.bat）
+build/
+# Visual Studio 生成器构建（vs-debug.bat / vs-release.bat）
+build-vs/
+# 测试运行产生的临时数据
+build_test_data/
+
+# ===== CMake 中间产物（若在源码树内生成）=====
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# ===== 编译产物 =====
+*.obj
+*.o
+*.d
+*.exe
+*.dll
+*.lib
+*.a
+*.pdb
+*.ilk
+*.exp
+
+# ===== IDE / 编辑器 =====
+# .vscode/ 不忽略（团队共享调试/IntelliSense 配置，2026-11-15 人工确认入库）
+.vs/
+.idea/
+*.user
+*.suo
+*.ncb
+*.sdf
+*.opensdf
+
+# ===== 系统文件 =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ===== 日志与临时文件 =====
+# 运行期日志目录（spdlog rotating，基名 logs/tagledger.log，2026-11-15 日志系统升级引入；
+# 目录级忽略：覆盖轮转产物 test.N.log 与将来可能的非 .log 运行期文件）
+logs/
+*.log
+*.tmp
+*~

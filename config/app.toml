@@ -1,0 +1,17 @@
+# tagledger 应用配置（toml++ 解析，硬性约束 13）
+# 优先级：命令行参数 > 本文件 > 内置默认值；本文件缺失或键缺省时使用默认值，零配置可启动。
+# 注意：config_dir 用于定位本文件（引导依赖），不可在本文件中设置，须用命令行 --config-dir。
+# 合法键：port(int)、data_dir(string)、web_dir(string)、[log] 段（见下）；非法类型或格式错误将被 WARN 忽略。
+
+# port = 8080
+# data_dir = "data"
+# web_dir = "web"
+
+# [log] 日志系统配置（spdlog；键缺省使用内置默认值）
+# level = "info"              # trace / debug / info / warning / error / critical / off
+# async = true                # 异步模式（后台线程写盘；false 为同步）
+# queue_size = 8192           # 异步队列长度（条，队列满时阻塞写入线程）
+# file_path = "logs/tagledger.log"  # 日志文件（轮转基名，目录不存在会自动创建）
+# max_file_mb = 10            # 单文件上限（MB），超出后轮转
+# max_files = 100             # 最多保留的日志文件数（含当前文件，旧文件自动清理）
+# console = true              # 是否同步输出到 stdout

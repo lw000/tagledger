@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工业点位采集编辑工具</title>
+<style>
+  :root {
+    --bg: #1e2530;          /* 主背景：深灰蓝，低眩光 */
+    --bg-panel: #262e3b;    /* 面板背景 */
+    --bg-input: #1a2029;    /* 输入控件背景 */
+    --line: #3a4656;        /* 边框/分隔线 */
+    --fg: #d7dee8;          /* 主文字：高对比浅灰 */
+    --fg-dim: #8fa0b5;      /* 次级文字 */
+    --accent: #2ea88a;      /* 工业青绿强调色 */
+    --accent-dim: #1f6d59;
+    --ok: #35c26e;          /* 状态：正常 */
+    --warn: #e5b13d;        /* 状态：告警 */
+    --err: #e5534b;         /* 状态：错误 */
+    --mono: Consolas, "Courier New", monospace;
+    --sans: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans); font-size: 14px; color: var(--fg);
+    background: var(--bg); display: flex; flex-direction: column;
+  }
+
+  /* ---------- 顶栏 ---------- */
+  header {
+    display: flex; align-items: center; gap: 16px; padding: 10px 18px;
+    background: var(--bg-panel); border-bottom: 2px solid var(--accent-dim);
+  }
+  header h1 { font-size: 17px; letter-spacing: 1px; }
+  header .spacer { flex: 1; }
+  #health { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg-dim); }
+  #health .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--err); }
+  #health.online .dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  #health.online { color: var(--fg); }
+
+  /* ---------- 布局 ---------- */
+  main { flex: 1; display: flex; min-height: 0; }
+  aside {
+    width: 240px; flex: none; background: var(--bg-panel);
+    border-right: 1px solid var(--line); padding: 14px;
+    display: flex; flex-direction: column; gap: 14px; overflow-y: auto;
+  }
+  .panel-title {
+    font-size: 12px; color: var(--fg-dim); letter-spacing: 2px;
+    text-transform: uppercase; border-bottom: 1px solid var(--line); padding-bottom: 6px;
+  }
+  #fileList { display: flex; flex-direction: column; gap: 4px; }
+  .file-item {
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px;
+    cursor: pointer; display: flex; justify-content: space-between; min-height: 36px;
+    align-items: center; background: var(--bg-input);
+  }
+  .file-item:hover { border-color: var(--accent); }
+  .file-item.active { border-color: var(--accent); background: var(--accent-dim); }
+  .file-item .rows { font-family: var(--mono); font-size: 12px; color: var(--fg-dim); }
+
+  form { display: flex; flex-direction: column; gap: 8px; }
+  input, select {
+    width: 100%; padding: 8px 10px; min-height: 36px; font: inherit;
+    background: var(--bg-input); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 3px;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  button {
+    padding: 9px 14px; min-height: 36px; font: inherit; font-weight: 600;
+    color: var(--fg); background: var(--bg-input); border: 1px solid var(--line);
+    border-radius: 3px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent-dim); border-color: var(--accent); color: #eafff8; }
+  button.primary:hover { background: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ---------- 主区 ---------- */
+  section { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 14px; gap: 12px; }
+  .table-wrap { flex: 1; overflow: auto; border: 1px solid var(--line); border-radius: 3px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    position: sticky; top: 0; background: var(--bg-panel); color: var(--fg-dim);
+    text-align: left; padding: 9px 12px; border-bottom: 2px solid var(--accent-dim);
+    letter-spacing: 1px; font-size: 12px; white-space: nowrap;
+  }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  tbody tr:nth-child(even) { background: rgba(255,255,255,.02); }
+  tbody tr:hover { background: rgba(46,168,138,.10); }
+  tbody tr.selected { background: var(--accent-dim); }
+  tbody tr.highlight { background: rgba(46,168,138,.20); }
+  td.num { font-family: var(--mono); color: var(--fg-dim); }
+  td.addr { font-family: var(--mono); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 12px; font-family: var(--mono); }
+  .tag.memory { color: #7fb3ff; border: 1px solid #7fb3ff44; }
+  .tag.io     { color: var(--accent); border: 1px solid var(--accent-dim); }
+  .tag.constant { color: var(--warn); border: 1px solid var(--warn44); }
+  .tag.rw { color: var(--ok); } .tag.ro { color: var(--warn); } .tag.wo { color: #ff8d7f; }
+
+  /* ---------- 编辑表单 ---------- */
+  #editor {
+    background: var(--bg-panel); border: 1px solid var(--line); border-radius: 3px;
+    padding: 14px; display: grid;
+    grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  #editor label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--fg-dim); }
+  #editor .actions { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; }
+  #editor .hint { font-size: 12px; color: var(--fg-dim); }
+  #editor .hint b { color: var(--accent); }
+
+  /* ---------- 状态栏 ---------- */
+  footer {
+    padding: 8px 18px; background: var(--bg-panel); border-top: 1px solid var(--line);
+    font-size: 13px; font-family: var(--mono); min-height: 36px;
+  }
+  footer.ok { color: var(--ok); } footer.err { color: var(--err); } footer.info { color: var(--fg-dim); }
+  .empty { color: var(--fg-dim); padding: 40px; text-align: center; }
+  .empty.err { color: var(--err); }
+</style>
+</head>
+<body>
+<header>
+  <h1>工业点位采集编辑工具</h1>
+  <span class="spacer"></span>
+  <div id="health"><span class="dot"></span><span id="healthText">连接中…</span></div>
+</header>
+
+<main>
+  <aside>
+    <div>
+      <div class="panel-title">CSV 文件</div>
+      <div style="height:8px"></div>
+      <button onclick="refreshFiles()">刷新列表</button>
+      <div style="height:10px"></div>
+      <div id="fileList"><div class="empty">加载中…</div></div>
+    </div>
+    <div>
+      <div class="panel-title">新建 CSV 文件</div>
+      <div style="height:8px"></div>
+      <form onsubmit="return createFile(event)">
+        <input id="newFileName" placeholder="文件名（字母/数字/_/-）" autocomplete="off" required>
+        <button class="primary" type="submit">＋ 新建文件</button>
+      </form>
+    </div>
+  </aside>
+
+  <section>
+    <div id="editor">
+      <label>点位名称 name
+        <input id="f_name" maxlength="64" placeholder="如 temp1">
+      </label>
+      <label>IO 地址 io_address
+        <input id="f_io_address" maxlength="64" placeholder="如 40001 / %IW64" style="font-family:var(--mono)">
+      </label>
+      <label>地址类型 address_type
+        <select id="f_address_type">
+          <option value="io">io（IO）</option>
+          <option value="memory">memory（内存）</option>
+          <option value="constant">constant（常量）</option>
+        </select>
+      </label>
+      <label>点位类型 point_type
+        <select id="f_point_type">
+          <option value="float">float</option>
+          <option value="bool">bool</option>
+          <option value="int">int</option>
+          <option value="uint">uint</option>
+          <option value="double">double</option>
+          <option value="string">string</option>
+        </select>
+      </label>
+      <label>读写属性 rw
+        <select id="f_rw">
+          <option value="rw">rw（读写）</option>
+          <option value="ro">ro（只读）</option>
+          <option value="wo">wo（只写）</option>
+        </select>
+      </label>
+      <label>描述 desc
+        <input id="f_desc" maxlength="255" placeholder="备注说明（可选）">
+      </label>
+      <div class="actions">
+        <button class="primary" id="btnAppend" onclick="appendPoint()">添加点位（写入表尾）</button>
+        <button id="btnUpdate" onclick="updatePoint()">保存修改（更新选中行）</button>
+        <button onclick="resetForm()">清空表单</button>
+        <span class="hint" id="editHint">未选中行：<b>添加</b>会向 <span id="curFileLabel">-</span> 追加新行</span>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:56px">#</th><th>点位名称</th><th>IO 地址</th>
+            <th>地址类型</th><th>点位类型</th><th>读写属性</th><th>描述</th>
+          </tr>
+        </thead>
+        <tbody id="pointBody"><tr><td colspan="7" class="empty">请选择左侧 CSV 文件</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer id="statusBar" class="info">就绪</footer>
+
+<script>
+"use strict";
+/* 仅使用原生标准 Web API：fetch / DOM / CSS3，无任何第三方库 */
+var currentFile = null;   // 当前文件名（不含 .csv）
+var selectedIndex = null; // 当前选中行
+var writeBusy = false;    // 写入请求进行中（防重复提交）
+
+function $(id) { return document.getElementById(id); }
+
+function setStatus(text, cls) {
+  var bar = $("statusBar");
+  bar.textContent = text;
+  bar.className = cls || "info";
+}
+
+/* 写入期间禁用两个写入按钮，防止重复提交 */
+function setWriteBusy(busy) {
+  writeBusy = busy;
+  var a = $("btnAppend"), u = $("btnUpdate");
+  if (a) { a.disabled = busy; a.textContent = busy ? "写入中…" : "添加点位（写入表尾）"; }
+  if (u) { u.disabled = busy; u.textContent = busy ? "保存中…" : "保存修改（更新选中行）"; }
+}
+
+function api(path, options) {
+  // GET 请求追加时间戳参数，防浏览器/代理缓存陈旧响应（与后端 Cache-Control 双保险）
+  if (!options || !options.method || options.method === "GET") {
+    path += (path.indexOf("?") === -1 ? "?" : "&") + "_ts=" + Date.now();
+  }
+  return fetch(path, options).catch(function (err) {
+    console.error("[api] 网络错误：", path, err);
+    throw { code: 0, message: "网络错误或服务不可达，请确认服务已启动" };
+  }).then(function (res) {
+    return res.json().catch(function () {
+      return { code: res.status, message: "响应不是合法 JSON（HTTP " + res.status + "），请确认访问的是服务端口而非静态文件" };
+    });
+  }).then(function (body) {
+    if (res_ok(body)) return body;
+    console.error("[api] 请求被拒绝：", path, "响应：", body);
+    throw body;
+  });
+}
+function res_ok(body) { return body && body.code === 0; }
+
+function errText(e) {
+  var msg = e && e.message ? e.message : "未知错误";
+  if (e && e.details && typeof e.details === "object" && !Array.isArray(e.details)) {
+    var d = e.details;
+    if (d.ip) msg += "（来源 " + d.ip + "）";
+  }
+  return (e && e.code) ? "HTTP " + e.code + "：" + msg : msg;
+}
+
+/* ---------- 健康检查轮询 ---------- */
+function pollHealth() {
+  fetch("/api/health").then(function (r) { return r.json(); }).then(function (b) {
+    var on = b && b.code === 0;
+    $("health").className = on ? "online" : "";
+    $("healthText").textContent = on ? "服务在线 v" + (b.data ? b.data.version : "?") : "服务异常";
+  }).catch(function () {
+    $("health").className = "";
+    $("healthText").textContent = "服务离线";
+  });
+}
+setInterval(pollHealth, 5000);
+
+/* ---------- 文件管理 ---------- */
+function refreshFiles() {
+  api("/api/v1/files").then(function (b) {
+    var list = $("fileList");
+    list.textContent = "";
+    if (!b.data.files.length) {
+      var tip = document.createElement("div");
+      tip.className = "empty"; tip.textContent = "暂无 CSV 文件，请先新建";
+      list.appendChild(tip);
+      return;
+    }
+    b.data.files.forEach(function (f) {
+      var item = document.createElement("div");
+      item.className = "file-item" + (currentFile === f.name.replace(/\.csv$/, "") ? " active" : "");
+      var name = document.createElement("span");
+      name.textContent = f.name;
+      var rows = document.createElement("span");
+      rows.className = "rows"; rows.textContent = f.rows + " 行";
+      item.appendChild(name); item.appendChild(rows);
+      item.onclick = function () { selectFile(f.name.replace(/\.csv$/, "")); };
+      list.appendChild(item);
+    });
+  }).catch(function (e) { setStatus("加载文件列表失败：" + errText(e), "err"); });
+}
+
+function createFile(ev) {
+  ev.preventDefault();
+  var name = $("newFileName").value.trim();
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(name)) {
+    setStatus("文件名不合法：仅允许字母、数字、下划线、连字符（1~64 位）", "err");
+    return false;
+  }
+  api("/api/v1/files", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: name })
+  }).then(function (b) {
+    setStatus("已创建文件 " + b.data.name, "ok");
+    $("newFileName").value = "";
+    refreshFiles();
+    selectFile(name);
+  }).catch(function (e) { setStatus("新建文件失败：" + errText(e), "err"); });
+  return false;
+}
+
+function selectFile(name) {
+  currentFile = name;
+  selectedIndex = null;
+  resetForm(); // 重建提示文案（含 curFileLabel 节点，写入当前文件名）
+  refreshFiles();
+  return reloadPoints();
+}
+
+/* 仅重新拉取当前文件点表并渲染（不重置表单、不重复刷新文件列表），
+   highlightIndex 可选：写入成功后高亮对应行 */
+function reloadPoints(highlightIndex) {
+  if (!currentFile) return Promise.resolve();
+  renderTable(null, "loading");
+  return api("/api/v1/points?file=" + encodeURIComponent(currentFile) + "&start=0&count=0")
+    .then(function (b) { renderTable(b.data, null, highlightIndex); })
+    .catch(function (e) {
+      setStatus("读取点表失败：" + errText(e), "err");
+      renderTable(null, "error");
+    });
+}
+
+/* ---------- 点表渲染 ---------- */
+/* state: null=正常渲染、"loading"=加载中占位、"error"=加载失败占位 */
+function renderTable(data, state, highlightIndex) {
+  var body = $("pointBody");
+  body.textContent = "";
+  if (state === "loading" || state === "error") {
+    var tipTr = document.createElement("tr");
+    var tipTd = document.createElement("td");
+    tipTd.colSpan = 7;
+    tipTd.className = state === "error" ? "empty err" : "empty";
+    tipTd.textContent = state === "error" ? "加载失败：请点击左侧文件重试" : "加载中…";
+    tipTr.appendChild(tipTd); body.appendChild(tipTr);
+    return;
+  }
+  var points = (data && data.points) ? data.points : [];
+  var total = (data && typeof data.total === "number") ? data.total : points.length;
+  if (!points.length) {
+    var tr = document.createElement("tr");
+    var td = document.createElement("td");
+    td.colSpan = 7; td.className = "empty";
+    td.textContent = "文件为空，请在上方表单添加点位";
+    tr.appendChild(td); body.appendChild(tr);
+    setStatus("已加载 " + currentFile + ".csv（共 " + total + " 行）", "info");
+    return;
+  }
+  try {
+    points.forEach(function (row) {
+      var p = row.point;
+      var tr = document.createElement("tr");
+      tr.dataset.index = row.index;
+      if (selectedIndex === row.index) tr.className = "selected";
+      tr.onclick = function () { pickRow(row.index, p); };
+      [row.index, p.name, p.io_address, p.address_type, p.point_type, p.rw, p.desc]
+        .forEach(function (v, i) {
+          var td = document.createElement("td");
+          if (i === 0) td.className = "num";
+          if (i === 2) td.className = "addr";
+          if (i === 3 || i === 5) {
+            var tag = document.createElement("span");
+            tag.className = "tag " + v;
+            tag.textContent = v;
+            td.appendChild(tag);
+          } else {
+            td.textContent = v;
+          }
+          tr.appendChild(td);
+        });
+      body.appendChild(tr);
+    });
+  } catch (e) {
+    console.error("[render] 表格渲染异常：", e);
+    body.textContent = "";
+    var badTr = document.createElement("tr");
+    var badTd = document.createElement("td");
+    badTd.colSpan = 7; badTd.className = "empty err";
+    badTd.textContent = "渲染异常：返回数据格式与预期不符（详情见 Console）";
+    badTr.appendChild(badTd); body.appendChild(badTr);
+    return;
+  }
+  if (highlightIndex !== undefined && highlightIndex !== null) {
+    var rows = body.querySelectorAll("tr");
+    for (var i = 0; i < rows.length; ++i)
+      if (rows[i].dataset.index === String(highlightIndex)) rows[i].className = "highlight";
+  }
+  setStatus("已加载 " + currentFile + ".csv（共 " + total + " 行）", "info");
+}
+
+function pickRow(index, p) {
+  selectedIndex = index;
+  $("f_name").value = p.name;
+  $("f_io_address").value = p.io_address;
+  $("f_address_type").value = p.address_type;
+  $("f_point_type").value = p.point_type;
+  $("f_rw").value = p.rw;
+  $("f_desc").value = p.desc;
+  $("editHint").innerHTML = "已选中第 <b>" + index + "</b> 行：" +
+    "修改表单后点击「保存修改」";
+  var rows = document.querySelectorAll("#pointBody tr");
+  for (var i = 0; i < rows.length; ++i)
+    rows[i].className = (rows[i].dataset.index === String(index)) ? "selected" : "";
+}
+
+function resetForm() {
+  ["f_name", "f_io_address", "f_desc"].forEach(function (id) { $(id).value = ""; });
+  $("f_address_type").value = "io";
+  $("f_point_type").value = "float";
+  $("f_rw").value = "rw";
+  selectedIndex = null;
+  // 注意：curFileLabel 是 editHint 的子节点，重建文案时必须一并重建该节点，
+  // 否则后续 $("curFileLabel") 返回 null 导致 selectFile 抛 TypeError、点表不再加载
+  $("editHint").innerHTML = "未选中行：<b>添加</b>会向 <span id=\"curFileLabel\">" +
+    (currentFile ? currentFile + ".csv" : "-") + "</span> 追加新行";
+  var rows = document.querySelectorAll("#pointBody tr");
+  for (var i = 0; i < rows.length; ++i) rows[i].className = "";
+}
+
+function pointFromForm() {
+  return {
+    name: $("f_name").value.trim(),
+    io_address: $("f_io_address").value.trim(),
+    address_type: $("f_address_type").value,
+    point_type: $("f_point_type").value,
+    rw: $("f_rw").value,
+    desc: $("f_desc").value.trim()
+  };
+}
+
+function validateForm(p) {
+  if (!/^\S{1,64}$/.test(p.name)) return "点位名称不能为空且不含空白（≤64 字符）";
+  if (!/^\S{1,64}$/.test(p.io_address)) return "IO 地址不能为空且不含空白（≤64 字符）";
+  return null;
+}
+
+/* ---------- 写入 ---------- */
+function appendPoint() {
+  if (writeBusy) return;
+  if (!currentFile) { setStatus("请先选择或新建 CSV 文件", "err"); return; }
+  var p = pointFromForm();
+  var err = validateForm(p);
+  if (err) { setStatus(err, "err"); return; }
+  setWriteBusy(true);
+  api("/api/v1/points", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file: currentFile, point: p })
+  }).then(function (b) {
+    setStatus("已追加到第 " + b.data.index + " 行（" + b.data.op + "）", "ok");
+    resetForm();
+    return reloadPoints(b.data.index).then(refreshFiles);
+  }).catch(function (e) {
+    setStatus("写入失败：" + errText(e), "err");
+  }).then(function () { setWriteBusy(false); });
+}
+
+function updatePoint() {
+  if (writeBusy) return;
+  if (selectedIndex === null) { setStatus("请先在表格中点击要修改的行", "err"); return; }
+  if (!currentFile) { setStatus("请先选择 CSV 文件", "err"); return; }
+  var p = pointFromForm();
+  var err = validateForm(p);
+  if (err) { setStatus(err, "err"); return; }
+  var target = selectedIndex;
+  setWriteBusy(true);
+  api("/api/v1/points", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file: currentFile, index: target, point: p })
+  }).then(function (b) {
+    setStatus("已更新第 " + b.data.index + " 行", "ok");
+    return reloadPoints(b.data.index).then(refreshFiles);
+  }).catch(function (e) {
+    setStatus("更新失败：" + errText(e), "err");
+  }).then(function () { setWriteBusy(false); });
+}
+
+/* ---------- 启动 ---------- */
+pollHealth();
+refreshFiles();
+</script>
+</body>
+</html>
