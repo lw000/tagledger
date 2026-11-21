@@ -1,11 +1,6 @@
 // 入口装配（B4）：只做"解析参数 → 构造服务 → init/start → 等待退出信号 → stop"。
 // HTTP 服务封装见 services/http_server（白名单与请求处理器由 HttpServer 统一管理）。
 
-// GCC 16 起标准头不再透传提供 <cstdint>，而 cxxopts 2.2.0 自身未包含该头，
-// 其接口直接使用 uint8_t 等类型，故须先于 cxxopts 引入（F2 顺序的已登记例外，
-// 缺陷与替代方案见 docs/06 附录 A"C++17 工具链适配登记"）。
-#include <cstdint>
-
 #include <cxxopts.hpp>
 
 #include <iostream>

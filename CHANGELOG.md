@@ -7,6 +7,13 @@
 
 ---
 
+## 2026-11-21（2 条）→ [changelog/2026-11-21.md](changelog/2026-11-21.md)
+
+| 时间 | 主题 |
+| --- | --- |
+| 16:51 | third_party 盘点裁决落地：cxxopts 登记 3.3.1（移除 \<cstdint\> 适配）+ nlohmann 回退 + 29 项备用库入库 |
+| 16:39 | third_party 目录全量盘点与 README 更新（纯文档；发现 cxxopts/nlohmann 未登记工作区覆盖 + 29 项未跟踪零引用条目） |
+
 ## 2026-11-15（24 条）→ [changelog/2026-11-15.md](changelog/2026-11-15.md)
 
 | 时间 | 主题 |
