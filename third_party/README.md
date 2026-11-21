@@ -126,4 +126,4 @@ Select-String -Path third_party/cxxopts/cxxopts.hpp -Pattern 'CXXOPTS__VERSION_'
 git grep -n "tomlplusplus\|concurrentqueue\|exprtk" -- ':!third_party' ':!build*'
 ```
 
-权威出处：依赖白名单与选型理由见 `docs/06-技术架构文档.md` 第 5 节与附录 A（约束 2 含备用库区条款）；本文件为 third_party 目录的状态盘点、使用说明与禁改规则索引。
+权威出处：依赖白名单与选型理由见 `docs/06-技术架构文档.md` 第 5 节与附录 A（约束 2 含备用库区条款）；各库的核心功能/适用场景/选型依据详见 **`docs/07-第三方库选型指南.md`**；本文件为 third_party 目录的状态盘点、使用说明与禁改规则索引。
